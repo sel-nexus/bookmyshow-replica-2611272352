@@ -15,11 +15,14 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.core.config import get_settings
-from app.core.database import ensure_database_exists
+from app.core.database import AsyncSessionFactory, ensure_database_exists
 from app.core.security import AuthenticationRequiredError
+from app.core.seed import seed_database
 from app.schemas.common import ErrorDetail, ErrorResponse
 from app.services.auth import InvalidOtpError
+from app.services.catalogue import MovieNotFoundError
 from app.routers.auth import router as auth_router
+from app.routers.catalogue import InvalidMovieIdError, router as catalogue_router
 from app.routers.health import router as health_router
 
 logger = logging.getLogger(__name__)
@@ -52,6 +55,8 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     await ensure_database_exists()
     alembic_config = Config("alembic.ini")
     await asyncio.to_thread(command.upgrade, alembic_config, "head")
+    async with AsyncSessionFactory() as session:
+        await seed_database(session)
     yield
 
 
@@ -120,6 +125,18 @@ async def authentication_required_error(request: Request, _: AuthenticationRequi
     return error_response(request, status.HTTP_401_UNAUTHORIZED, "AUTH_REQUIRED", "Authentication required")
 
 
+@app.exception_handler(InvalidMovieIdError)
+async def invalid_movie_id_error(request: Request, _: InvalidMovieIdError) -> JSONResponse:
+    """Translate malformed movie identifiers to the catalogue error contract."""
+    return error_response(request, status.HTTP_422_UNPROCESSABLE_ENTITY, "INVALID_MOVIE_ID", "Invalid movie ID")
+
+
+@app.exception_handler(MovieNotFoundError)
+async def movie_not_found_error(request: Request, _: MovieNotFoundError) -> JSONResponse:
+    """Translate missing catalogue movies to a structured not-found response."""
+    return error_response(request, status.HTTP_404_NOT_FOUND, "MOVIE_NOT_FOUND", "Movie not found")
+
+
 @app.exception_handler(SQLAlchemyError)
 async def database_error(request: Request, error: SQLAlchemyError) -> JSONResponse:
     """Log database faults and return a safe readiness-style error.
@@ -136,4 +153,5 @@ async def database_error(request: Request, error: SQLAlchemyError) -> JSONRespon
 
 
 app.include_router(auth_router)
+app.include_router(catalogue_router)
 app.include_router(health_router)

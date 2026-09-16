@@ -9,6 +9,8 @@ __pycache__/
 .env.*.local
 coverage/
 .pytest_cache/
+.angular/
+
 PLAN.md
 todos.yaml
 developer_metadata.json
