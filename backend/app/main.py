@@ -21,7 +21,10 @@ from app.core.seed import seed_database
 from app.schemas.common import ErrorDetail, ErrorResponse
 from app.services.auth import InvalidOtpError
 from app.services.catalogue import MovieNotFoundError
+from app.services.bookings import (InvalidFixedSeatsError, InvalidPaymentMethodError, InvalidTheatreForMovieError,
+                                   MovieNotFoundForBookingError, TheatreNotFoundError)
 from app.routers.auth import router as auth_router
+from app.routers.bookings import router as bookings_router
 from app.routers.catalogue import InvalidMovieIdError, router as catalogue_router
 from app.routers.health import router as health_router
 
@@ -94,6 +97,8 @@ async def request_validation_error(request: Request, _: RequestValidationError) 
     Returns:
         The structured malformed-mobile response.
     """
+    if request.url.path == "/api/bookings":
+        return error_response(request, status.HTTP_422_UNPROCESSABLE_ENTITY, "INVALID_BOOKING_REQUEST", "Invalid booking request")
     return error_response(request, status.HTTP_422_UNPROCESSABLE_ENTITY, "INVALID_MOBILE", "Invalid mobile number")
 
 
@@ -137,6 +142,36 @@ async def movie_not_found_error(request: Request, _: MovieNotFoundError) -> JSON
     return error_response(request, status.HTTP_404_NOT_FOUND, "MOVIE_NOT_FOUND", "Movie not found")
 
 
+@app.exception_handler(InvalidPaymentMethodError)
+async def invalid_payment_method_error(request: Request, _: InvalidPaymentMethodError) -> JSONResponse:
+    """Translate invalid booking payment methods to the public contract."""
+    return error_response(request, status.HTTP_422_UNPROCESSABLE_ENTITY, "INVALID_PAYMENT_METHOD", "Invalid payment method")
+
+
+@app.exception_handler(InvalidFixedSeatsError)
+async def invalid_fixed_seats_error(request: Request, _: InvalidFixedSeatsError) -> JSONResponse:
+    """Translate non-canonical booking seats to the public contract."""
+    return error_response(request, status.HTTP_422_UNPROCESSABLE_ENTITY, "INVALID_FIXED_SEATS", "Seats must be A1, A2, A3 in order")
+
+
+@app.exception_handler(MovieNotFoundForBookingError)
+async def booking_movie_not_found_error(request: Request, _: MovieNotFoundForBookingError) -> JSONResponse:
+    """Translate missing booking movie references to the public contract."""
+    return error_response(request, status.HTTP_404_NOT_FOUND, "MOVIE_NOT_FOUND", "Movie not found")
+
+
+@app.exception_handler(TheatreNotFoundError)
+async def theatre_not_found_error(request: Request, _: TheatreNotFoundError) -> JSONResponse:
+    """Translate missing booking theatre references to the public contract."""
+    return error_response(request, status.HTTP_404_NOT_FOUND, "THEATRE_NOT_FOUND", "Theatre not found")
+
+
+@app.exception_handler(InvalidTheatreForMovieError)
+async def invalid_theatre_for_movie_error(request: Request, _: InvalidTheatreForMovieError) -> JSONResponse:
+    """Translate unsupported movie-theatre combinations to the public contract."""
+    return error_response(request, status.HTTP_422_UNPROCESSABLE_ENTITY, "INVALID_THEATRE_FOR_MOVIE", "Theatre is not available for this movie")
+
+
 @app.exception_handler(SQLAlchemyError)
 async def database_error(request: Request, error: SQLAlchemyError) -> JSONResponse:
     """Log database faults and return a safe readiness-style error.
@@ -154,4 +189,5 @@ async def database_error(request: Request, error: SQLAlchemyError) -> JSONRespon
 
 app.include_router(auth_router)
 app.include_router(catalogue_router)
+app.include_router(bookings_router)
 app.include_router(health_router)

@@ -7,6 +7,8 @@ import { environment } from '../../environments/environment';
 
 export interface Movie { id: string; title: string; poster_placeholder: string; }
 export interface Theatre { id: string; name: string; }
+export interface CreateBookingRequest { movie_id: string; theatre_id: string; seats: ['A1', 'A2', 'A3']; payment_method: 'CARD' | 'UPI'; }
+export interface BookingConfirmation { booking_confirmation_id: string; movie: { id: string; title: string }; theatre: { id: string; name: string }; seats: string[]; total_price: string | number; payment_method: 'CARD' | 'UPI'; booked_at: string; }
 interface MoviesResponse { movies: Movie[]; }
 interface TheatresResponse { theatres: Theatre[]; }
 
@@ -24,5 +26,10 @@ export class ApiService {
   /** Return theatres mapped to one selected movie. */
   getTheatres(movieId: string): Observable<TheatresResponse> {
     return this.http.get<TheatresResponse>(`${environment.apiBaseUrl}/api/theatres`, { params: { movie_id: movieId } });
+  }
+
+  /** Create a booking using only the strict server-approved payload. */
+  createBooking(request: CreateBookingRequest): Observable<BookingConfirmation> {
+    return this.http.post<BookingConfirmation>(`${environment.apiBaseUrl}/api/bookings`, request);
   }
 }
