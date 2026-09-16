@@ -1,0 +1,22 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root { --background: #111111; --surface: #fffaf8; --foreground: #16100f; --muted: #705f5c; --border: #decfca; --ring: #d71920; --primary: #d71920; --error: #a60f16; font-family: 'DM Sans', sans-serif; color: var(--foreground); background: var(--background); }
+* { box-sizing: border-box; }
+body { margin: 0; min-height: 100vh; background: radial-gradient(circle at 90% 10%, #4a1115 0, transparent 28rem), var(--background); }
+a { color: inherit; }
+.page { min-height: 100vh; display: grid; place-items: center; padding: 1.5rem; }
+.panel { width: min(100%, 32rem); padding: clamp(2rem, 8vw, 4.5rem); background: var(--surface); border-radius: 1.25rem; box-shadow: 0 24px 80px rgba(0,0,0,.38); }
+.eyebrow { margin: 0 0 .75rem; color: var(--primary); text-transform: uppercase; font-weight: 700; letter-spacing: .14em; font-size: .75rem; }
+h1 { margin: 0 0 1rem; font-family: 'Bebas Neue', sans-serif; font-size: clamp(3rem, 11vw, 5.8rem); line-height: .88; letter-spacing: .02em; }
+p { line-height: 1.6; }
+.button { display: inline-flex; justify-content: center; align-items: center; min-height: 3rem; padding: .8rem 1.2rem; border: 0; border-radius: 999px; background: var(--primary); color: #fff; font: inherit; font-weight: 700; cursor: pointer; text-decoration: none; transition: transform 220ms ease-out, box-shadow 220ms ease-out; }
+.button:hover { transform: translateY(-2px); box-shadow: 0 9px 20px rgba(215,25,32,.35); }
+.button:focus-visible, input:focus-visible { outline: 3px solid var(--ring); outline-offset: 3px; }
+.button[disabled] { cursor: wait; opacity: .65; transform: none; }
+.field { display: grid; gap: .45rem; margin: 1.2rem 0; font-weight: 700; }
+input { width: 100%; min-height: 3rem; padding: .7rem .8rem; border: 1px solid var(--border); border-radius: .7rem; font: inherit; }
+.error { color: var(--error); margin: .4rem 0; font-size: .9rem; }
+.status { min-height: 1.5rem; color: var(--muted); }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; } }
