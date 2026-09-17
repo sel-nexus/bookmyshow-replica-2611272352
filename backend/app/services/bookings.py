@@ -36,6 +36,10 @@ class InvalidTheatreForMovieError(Exception):
     """Signal a theatre not mapped to the selected movie."""
 
 
+class BookingNotFoundError(Exception):
+    """Signal a missing or non-owned booking confirmation."""
+
+
 class BookingService:
     """Create durable confirmations after every authoritative validation passes."""
 
@@ -92,7 +96,7 @@ class BookingService:
                 total_price=FIXED_TOTAL_PRICE,
                 payment_method=payment_method,
                 confirmation_id=confirmation_id,
-                booked_at=datetime.now(UTC),
+                created_at=datetime.now(UTC),
             )
             self._bookings.add(booking)
             await self._session.flush()
@@ -103,9 +107,37 @@ class BookingService:
                 seats=list(booking.seats),
                 total_price=booking.total_price,
                 payment_method=booking.payment_method.value,
-                booked_at=booking.booked_at,
+                booked_at=booking.created_at,
             )
         return response
+
+    async def get_booking(self, user: User, confirmation_id: str) -> BookingConfirmationResponse:
+        """Read one durable confirmation owned by the authenticated customer.
+
+        Args:
+            user: The bearer-authenticated customer.
+            confirmation_id: The public confirmation identifier from the route.
+
+        Returns:
+            The persisted confirmation details.
+
+        Raises:
+            BookingNotFoundError: If no booking with this identifier belongs to the user.
+        """
+        user_id = inspect(user).identity[0]
+        result = await self._bookings.get_for_user(confirmation_id, user_id)
+        if result is None:
+            raise BookingNotFoundError()
+        booking, movie, theatre = result
+        return BookingConfirmationResponse(
+            booking_confirmation_id=booking.confirmation_id,
+            movie=BookingMovieResponse(id=movie.id, title=movie.title),
+            theatre=BookingTheatreResponse(id=theatre.id, name=theatre.name),
+            seats=list(booking.seats),
+            total_price=booking.total_price,
+            payment_method=booking.payment_method.value,
+            booked_at=booking.created_at,
+        )
 
     async def _new_confirmation_id(self) -> str:
         """Generate an unused public confirmation identifier.

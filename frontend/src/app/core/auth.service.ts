@@ -6,7 +6,7 @@ import { Observable, tap } from 'rxjs';
 import { environment } from '../../environments/environment';
 
 interface LoginResponse { authentication_state: 'otp_required'; mobile_number: string; }
-interface VerifyResponse { access_token: string; token_type: 'bearer'; expires_in: number; claims: Record<string, string | number>; }
+interface VerifyResponse { access_token: string; token_type: 'bearer'; expires_in: number; user: { id: string; mobile_number: string }; }
 
 /** Coordinate API authentication while retaining no browser-persistent token. */
 @Injectable({ providedIn: 'root' })

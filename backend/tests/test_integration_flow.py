@@ -3,7 +3,7 @@
 from test_bookings import client, postgres_schema, headers
 
 import pytest
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from app.core.database import AsyncSessionFactory
 from app.models.entities import Booking
@@ -35,6 +35,11 @@ async def test_auth_catalogue_invalid_mapping_chain_returns_domain_error(client)
     paradise = next(item for item in movies if item["title"] == "Paradise")
     og2 = next(item for item in movies if item["title"] == "OG2")
     unmapped_paradise_theatre = (await client.get("/api/theatres", params={"movie_id": paradise["id"]}, headers=auth)).json()["theatres"][1]
+    async with AsyncSessionFactory() as session:
+        before = int(await session.scalar(select(func.count()).select_from(Booking)) or 0)
     response = await client.post("/api/bookings", headers=auth, json={"movie_id": og2["id"], "theatre_id": unmapped_paradise_theatre["id"], "seats": ["A1", "A2", "A3"], "payment_method": "CARD"})
     assert response.status_code == 422
     assert response.json()["error"]["code"] == "INVALID_THEATRE_FOR_MOVIE"
+    async with AsyncSessionFactory() as session:
+        after = await session.scalar(select(func.count()).select_from(Booking))
+    assert after == before

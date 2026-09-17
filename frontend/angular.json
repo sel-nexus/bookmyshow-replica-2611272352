@@ -26,7 +26,7 @@
           "defaultConfiguration": "production"
         },
         "serve": {"builder": "@angular-devkit/build-angular:dev-server", "configurations": {"development": {"buildTarget": "bookmyshow:build:development"}, "production": {"buildTarget": "bookmyshow:build:production"}}, "defaultConfiguration": "development"},
-        "test": {"builder": "@angular-devkit/build-angular:karma", "options": {"tsConfig": "tsconfig.spec.json", "styles": ["src/styles.css"], "assets": []}}
+        "test": {"builder": "@angular-devkit/build-angular:karma", "options": {"tsConfig": "tsconfig.spec.json", "styles": ["src/styles.css"], "assets": [], "polyfills": ["zone.js", "zone.js/testing"]}}
       }
     }
   }

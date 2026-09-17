@@ -20,20 +20,22 @@ def upgrade() -> None:
     op.create_table("users", sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
                     sa.Column("mobile_number", sa.String(length=10), nullable=False, unique=True),
                     sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
-                    sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False))
+                    sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
+                    sa.CheckConstraint("mobile_number ~ '^[0-9]{10}$'", name="ck_users_mobile_number_ascii_digits"))
     op.create_index("ix_users_mobile_number", "users", ["mobile_number"])
     op.create_table("movies", sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
-                    sa.Column("title", sa.String(length=200), nullable=False, unique=True))
+                    sa.Column("title", sa.String(length=200), nullable=False, unique=True),
+                    sa.Column("poster_placeholder", sa.String(length=255), nullable=False))
     op.create_table("theatres", sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
                     sa.Column("name", sa.String(length=200), nullable=False, unique=True))
-    op.create_table("movie_theatres", sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
-                    sa.Column("movie_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("movies.id", ondelete="CASCADE"), nullable=False),
-                    sa.Column("theatre_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("theatres.id", ondelete="CASCADE"), nullable=False),
-                    sa.UniqueConstraint("movie_id", "theatre_id", name="uq_movie_theatre"))
+    op.create_table("movie_theatres",
+                    sa.Column("movie_id", postgresql.UUID(as_uuid=True),
+                              sa.ForeignKey("movies.id", ondelete="RESTRICT"), primary_key=True),
+                    sa.Column("theatre_id", postgresql.UUID(as_uuid=True),
+                              sa.ForeignKey("theatres.id", ondelete="RESTRICT"), primary_key=True))
     op.create_index("ix_movie_theatres_movie_id", "movie_theatres", ["movie_id"])
     op.create_index("ix_movie_theatres_theatre_id", "movie_theatres", ["theatre_id"])
     payment_method = postgresql.ENUM("CARD", "UPI", name="payment_method")
-    payment_method.create(op.get_bind(), checkfirst=True)
     op.create_table("bookings", sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
                     sa.Column("user_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("users.id", ondelete="RESTRICT"), nullable=False),
                     sa.Column("movie_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("movies.id", ondelete="RESTRICT"), nullable=False),
@@ -41,7 +43,7 @@ def upgrade() -> None:
                     sa.Column("seats", postgresql.JSONB(astext_type=sa.Text()), nullable=False),
                     sa.Column("payment_method", payment_method, nullable=False), sa.Column("total_price", sa.Numeric(10, 2), nullable=False),
                     sa.Column("confirmation_id", sa.String(length=32), nullable=False, unique=True),
-                    sa.Column("booked_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
+                    sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
                     sa.CheckConstraint("seats = '[\"A1\", \"A2\", \"A3\"]'::jsonb", name="ck_bookings_fixed_seats"),
                     sa.CheckConstraint("total_price = 450.00", name="ck_bookings_fixed_total_price"))
     op.create_index("ix_bookings_user_id", "bookings", ["user_id"])

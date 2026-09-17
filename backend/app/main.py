@@ -21,7 +21,8 @@ from app.core.seed import seed_database
 from app.schemas.common import ErrorDetail, ErrorResponse
 from app.services.auth import InvalidOtpError
 from app.services.catalogue import MovieNotFoundError
-from app.services.bookings import (InvalidFixedSeatsError, InvalidPaymentMethodError, InvalidTheatreForMovieError,
+from app.services.bookings import (BookingNotFoundError, InvalidFixedSeatsError, InvalidPaymentMethodError,
+                                    InvalidTheatreForMovieError,
                                    MovieNotFoundForBookingError, TheatreNotFoundError)
 from app.routers.auth import router as auth_router
 from app.routers.bookings import router as bookings_router
@@ -140,6 +141,12 @@ async def invalid_movie_id_error(request: Request, _: InvalidMovieIdError) -> JS
 async def movie_not_found_error(request: Request, _: MovieNotFoundError) -> JSONResponse:
     """Translate missing catalogue movies to a structured not-found response."""
     return error_response(request, status.HTTP_404_NOT_FOUND, "MOVIE_NOT_FOUND", "Movie not found")
+
+
+@app.exception_handler(BookingNotFoundError)
+async def booking_not_found_error(request: Request, _: BookingNotFoundError) -> JSONResponse:
+    """Avoid revealing whether a confirmation exists outside the caller's account."""
+    return error_response(request, status.HTTP_404_NOT_FOUND, "BOOKING_NOT_FOUND", "Booking not found")
 
 
 @app.exception_handler(InvalidPaymentMethodError)

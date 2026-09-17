@@ -20,6 +20,6 @@ export const routes: Routes = [
   { path: 'theatres', component: TheatresComponent, canActivate: [authGuard], title: 'Theatres | BookMyShow' },
   { path: 'seats', component: SeatsComponent, canActivate: [authGuard], title: 'Seats | BookMyShow' },
   { path: 'payment', component: PaymentComponent, canActivate: [authGuard], title: 'Payment | BookMyShow' },
-  { path: 'confirmation', component: ConfirmationComponent, canActivate: [authGuard], title: 'Confirmation | BookMyShow' },
+  { path: 'confirmation/:confirmationId', component: ConfirmationComponent, canActivate: [authGuard], title: 'Confirmation | BookMyShow' },
   { path: '**', redirectTo: '' }
 ];

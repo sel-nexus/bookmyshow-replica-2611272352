@@ -41,7 +41,7 @@ export class PaymentComponent implements OnDestroy {
     this.store.setPhase('PROCESSING');
     this.processing = timer(2000).subscribe(() => {
       this.api.createBooking({ movie_id: draft.movie!.id, theatre_id: draft.theatre!.id, seats: ['A1', 'A2', 'A3'], payment_method: this.paymentMethod() }).subscribe({
-        next: (confirmation) => { this.store.confirm(confirmation); void this.router.navigate(['/confirmation']); },
+        next: (confirmation) => { this.store.confirm(confirmation); void this.router.navigate(['/confirmation', confirmation.booking_confirmation_id]); },
         error: () => { this.store.setPhase('PAYMENT'); this.payDisabled.set(false); this.message.set('Payment could not be confirmed. Please try again.'); }
       });
     });

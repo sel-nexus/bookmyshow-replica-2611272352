@@ -44,11 +44,19 @@ class LoginResponse(BaseModel):
     mobile_number: str
 
 
+class AuthenticatedUserResponse(BaseModel):
+    """Expose the public identity associated with a verified token."""
+
+    model_config = ConfigDict(extra="forbid")
+    id: str
+    mobile_number: str
+
+
 class VerifyResponse(BaseModel):
-    """Return the bearer token and its validated JWT claims."""
+    """Return only the LLD-defined public bearer-token response."""
 
     model_config = ConfigDict(extra="forbid")
     access_token: str
     token_type: Literal["bearer"]
     expires_in: int
-    claims: dict[str, str | int]
+    user: AuthenticatedUserResponse

@@ -32,4 +32,9 @@ export class ApiService {
   createBooking(request: CreateBookingRequest): Observable<BookingConfirmation> {
     return this.http.post<BookingConfirmation>(`${environment.apiBaseUrl}/api/bookings`, request);
   }
+
+  /** Read an authenticated customer's durable booking confirmation. */
+  getBooking(confirmationId: string): Observable<BookingConfirmation> {
+    return this.http.get<BookingConfirmation>(`${environment.apiBaseUrl}/api/bookings/${encodeURIComponent(confirmationId)}`);
+  }
 }

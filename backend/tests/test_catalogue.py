@@ -2,6 +2,7 @@
 
 import asyncio
 import os
+from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
 os.environ["DATABASE_URL"] = "postgresql+asyncpg://postgres:postgres@127.0.0.1:5432/postgres"
@@ -12,6 +13,7 @@ os.environ["JWT_AUDIENCE"] = "bookmyshow-web"
 os.environ["DEMO_OTP"] = "1234"
 
 import httpx
+import jwt
 import pytest
 import pytest_asyncio
 
@@ -48,6 +50,30 @@ async def authorization_headers(client: httpx.AsyncClient) -> dict[str, str]:
     """Issue a genuine bearer token through the auth HTTP endpoint."""
     response = await client.post("/api/auth/verify", json={"mobile_number": "9876543210", "otp": "1234"})
     return {"Authorization": f"Bearer {response.json()['access_token']}"}
+
+
+def expired_authorization_header() -> dict[str, str]:
+    """Build a correctly signed but expired bearer credential."""
+    now = datetime.now(UTC)
+    token = jwt.encode(
+        {"sub": str(uuid4()), "iss": "bookmyshow-api", "aud": "bookmyshow-web",
+         "iat": int((now - timedelta(hours=2)).timestamp()), "exp": int((now - timedelta(hours=1)).timestamp())},
+        os.environ["JWT_SECRET"], algorithm="HS256",
+    )
+    return {"Authorization": f"Bearer {token}"}
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("path, params", [("/api/movies", None), ("/api/theatres", {"movie_id": str(uuid4())})])
+@pytest.mark.parametrize("headers", [None, {"Authorization": "Bearer not-a-jwt"}, expired_authorization_header()])
+async def test_catalogue_protected_endpoints_reject_absent_malformed_and_expired_bearers(
+    client: httpx.AsyncClient, path: str, params: dict[str, str] | None, headers: dict[str, str] | None
+) -> None:
+    """Reject every protected catalogue credential failure generically before domain parsing."""
+    response = await client.get(path, params=params, headers=headers)
+    assert response.status_code == 401
+    assert response.json()["error"]["code"] == "AUTH_REQUIRED"
+    assert "traceback" not in response.text.lower()
 
 
 @pytest.mark.asyncio

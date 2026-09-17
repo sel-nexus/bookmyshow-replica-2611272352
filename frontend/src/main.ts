@@ -1,4 +1,6 @@
 /** Bootstrap the standalone BookMyShow client. */
+import 'zone.js';
+
 import { Component } from '@angular/core';
 import { bootstrapApplication } from '@angular/platform-browser';
 import { RouterOutlet } from '@angular/router';
@@ -6,7 +8,7 @@ import { RouterOutlet } from '@angular/router';
 import { appConfig } from './app/app.config';
 
 /** Host routed feature pages. */
-@Component({ standalone: true, selector: 'app-root', imports: [RouterOutlet], template: '<router-outlet />' })
+@Component({ standalone: true, selector: 'app-root', imports: [RouterOutlet], template: '<router-outlet></router-outlet>' })
 class AppComponent {}
 
 /** Start the Angular application. */

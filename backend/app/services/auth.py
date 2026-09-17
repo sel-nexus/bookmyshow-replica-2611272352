@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import get_settings
 from app.core.security import create_access_token
 from app.repositories.users import UserRepository
-from app.schemas.auth import LoginResponse, VerifyResponse
+from app.schemas.auth import AuthenticatedUserResponse, LoginResponse, VerifyResponse
 
 
 class InvalidOtpError(Exception):
@@ -53,6 +53,10 @@ class AuthService:
         user = await self._users.get_or_create(mobile_number)
         await self._session.commit()
         await self._session.refresh(user)
-        token, claims = create_access_token(user)
-        return VerifyResponse(access_token=token, token_type="bearer",
-                              expires_in=get_settings().jwt_expires_seconds, claims=claims)
+        token, _claims = create_access_token(user)
+        return VerifyResponse(
+            access_token=token,
+            token_type="bearer",
+            expires_in=get_settings().jwt_expires_seconds,
+            user=AuthenticatedUserResponse(id=str(user.id), mobile_number=user.mobile_number),
+        )

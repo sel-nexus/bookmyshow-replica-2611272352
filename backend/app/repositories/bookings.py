@@ -51,7 +51,7 @@ class BookingRepository:
         Returns:
             True only when the mapping exists.
         """
-        return (await self._session.scalar(select(MovieTheatre.id).where(
+        return (await self._session.scalar(select(MovieTheatre.movie_id).where(
             MovieTheatre.movie_id == movie_id, MovieTheatre.theatre_id == theatre_id
         ))) is not None
 
@@ -65,6 +65,24 @@ class BookingRepository:
             True when a durable booking already owns the ID.
         """
         return (await self._session.scalar(select(Booking.id).where(Booking.confirmation_id == confirmation_id))) is not None
+
+    async def get_for_user(self, confirmation_id: str, user_id: UUID) -> tuple[Booking, Movie, Theatre] | None:
+        """Fetch one customer's booking with its persisted movie and theatre.
+
+        Args:
+            confirmation_id: Public confirmation identifier to read.
+            user_id: Authenticated owner allowed to read the confirmation.
+
+        Returns:
+            The persisted booking and display records when owned by the user.
+        """
+        statement = (
+            select(Booking, Movie, Theatre)
+            .join(Movie, Booking.movie_id == Movie.id)
+            .join(Theatre, Booking.theatre_id == Theatre.id)
+            .where(Booking.confirmation_id == confirmation_id, Booking.user_id == user_id)
+        )
+        return (await self._session.execute(statement)).one_or_none()
 
     def add(self, booking: Booking) -> None:
         """Stage a booking for the current transaction.

@@ -14,7 +14,9 @@ import httpx
 import jwt
 import pytest
 import pytest_asyncio
-from sqlalchemy import text
+from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
+from app.models.entities import User
 
 from app.core.database import AsyncSessionFactory, engine, ensure_database_exists
 from app.main import app
@@ -73,19 +75,61 @@ async def test_verify_rejects_wrong_otp(client: httpx.AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
-async def test_verify_persists_user_and_issues_valid_claims(client: httpx.AsyncClient) -> None:
-    """Persist a user and return an issuer/audience verified bearer JWT."""
+async def test_verify_persists_user_and_returns_exact_public_shape(client: httpx.AsyncClient) -> None:
+    """Persist a user, expose only its public identity, and issue a valid JWT."""
     response = await client.post("/api/auth/verify", json={"mobile_number": "9876543210", "otp": "1234"})
     assert response.status_code == 200
     body = response.json()
+    assert set(body) == {"access_token", "token_type", "expires_in", "user"}
     assert body["token_type"] == "bearer"
     assert body["expires_in"] == 1800
+    assert set(body["user"]) == {"id", "mobile_number"}
+    assert body["user"]["mobile_number"] == "9876543210"
     claims = jwt.decode(body["access_token"], os.environ["JWT_SECRET"], algorithms=["HS256"],
                         issuer="bookmyshow-api", audience="bookmyshow-web")
-    assert claims == body["claims"]
+    assert claims["sub"] == body["user"]["id"]
     async with AsyncSessionFactory() as session:
-        persisted_count = await session.scalar(text("SELECT count(*) FROM users WHERE mobile_number = '9876543210'"))
+        persisted_count = await session.scalar(select(func.count()).select_from(User).where(User.mobile_number == "9876543210"))
     assert persisted_count == 1
+
+
+@pytest.mark.asyncio
+async def test_database_rejects_direct_non_ascii_mobile_insert() -> None:
+    """Enforce the mobile constraint even when application validation is bypassed."""
+    await engine.dispose()
+    async with AsyncSessionFactory() as session:
+        session.add(User(mobile_number="١٢٣٤٥٦٧٨٩٠"))
+        with pytest.raises(IntegrityError):
+            await session.flush()
+        await session.rollback()
+    await engine.dispose()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("payload", [
+    {},
+    {"mobile_number": None, "otp": "1234"},
+    {"mobile_number": 9876543210, "otp": "1234"},
+    {"mobile_number": "12345abcde", "otp": "1234"},
+    {"mobile_number": "9" * 11, "otp": "1234"},
+    {"mobile_number": "9876543210", "otp": None},
+    {"mobile_number": "9876543210", "otp": "x" * 33},
+    {"mobile_number": "9876543210", "otp": "1234", "role": "admin'; DROP TABLE users; --"},
+])
+async def test_verify_rejects_invalid_or_hostile_payload_without_creating_user(
+    client: httpx.AsyncClient, payload: dict[str, object]
+) -> None:
+    """Reject invalid boundary and hostile inputs without leaking details or persisting users."""
+    before: int
+    async with AsyncSessionFactory() as session:
+        before = int(await session.scalar(select(func.count()).select_from(User)) or 0)
+    response = await client.post("/api/auth/verify", json=payload)
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] in {"INVALID_MOBILE", "INVALID_REQUEST"}
+    assert "traceback" not in response.text.lower()
+    async with AsyncSessionFactory() as session:
+        after = await session.scalar(select(func.count()).select_from(User))
+    assert after == before
 
 
 @pytest.mark.asyncio
