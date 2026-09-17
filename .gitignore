@@ -10,6 +10,9 @@ __pycache__/
 coverage/
 .pytest_cache/
 .angular/
+frontend/test-results/.last-run.json
+frontend/test-results/*/trace.zip
+frontend/test-results/*/error-context.md
 
 PLAN.md
 todos.yaml
