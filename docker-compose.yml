@@ -12,8 +12,6 @@ services:
       retries: 10
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
   backend:
     build: ./backend
     environment:
